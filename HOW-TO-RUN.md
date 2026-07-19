@@ -3,47 +3,70 @@
 Domain Genie helps you find clever domain names. You type your idea, the AI invents
 witty names, and the app instantly checks which ones are actually free to register.
 
-## Running it on your computer (easiest)
+It now runs as a **public website with no API key to type in** — you just open it and
+go. Your Anthropic key is hidden safely on your own web host, so nobody using the site
+ever sees it.
 
-1. Open the `domain-genie` folder.
-2. Double-click **index.html**. It opens in your web browser — that's the whole app.
-3. The first time, a settings box appears asking for your **Anthropic API key**.
-   - Your key is in the file **"Claude API key.txt"** in your Claude projects folder
-     (the long code on the first line that starts with `sk-ant-`).
-   - Copy it and paste it into the box. It's saved in your browser, so you only do this once.
-4. Type your idea in the big box (one sentence is plenty) and click **✨ Summon names**.
-5. Wait about 15–30 seconds. Names appear and get checked one by one.
+---
+
+## Using it (the easy part)
+
+Just open the live site in any browser, on any device:
+
+**https://galasaf.github.io/domain-genie/**
+
+1. Type your idea in the big box (one sentence is plenty) and click **✨ Summon names**.
+2. Wait about 15–30 seconds. Names appear and get checked one by one.
    - ✅ **Available** — verified free at the official registry. Go get it!
-   - 🤔 **Probably available** — looks free, but that domain ending couldn't be fully
-     verified. Click "Register" to double-check.
+   - 🤔 **Probably available** — looks free, but that ending couldn't be fully verified.
    - ❌ **Taken** — shown at the bottom, just for inspiration.
-6. Not happy? Click **➕ More names** and it invents a fresh batch (no repeats).
-7. Click **Register ↗** next to a name to open it on Namecheap, or **Copy** to copy it.
+3. Not happy? Click **➕ More names** for a fresh batch (no repeats).
+4. Click **Register ↗** next to a name to open it on Namecheap, or **Copy** to copy it.
+
+---
+
+## One-time setup (already done, but here's how it works)
+
+The website itself contains **no key**. When you ask for names, it quietly calls a small
+helper file called **`proxy.php`** that lives on your iWebFusion web host. That helper
+holds your Anthropic key and talks to Claude on the site's behalf. This is what lets the
+site be public without exposing your key.
+
+If you ever need to set it up again (new key, new host, etc.):
+
+1. Open **`proxy.example.php`** (in this folder), copy it to a file named **`proxy.php`**,
+   and paste your Anthropic key (from **"Claude API key.txt"**) into the line that says
+   `$ANTHROPIC_KEY = '...';`.
+   *(If you're on this computer, `proxy.php` already exists with your key filled in.)*
+2. Log in to iWebFusion cPanel: **https://uniform.iwebfusion.net:2083/**
+3. **File Manager** → open **public_html** → create a folder named **`domain-genie`**.
+4. **Upload** `proxy.php` into `public_html/domain-genie/`.
+5. That's it. The website already knows to call `https://asafgal.com/domain-genie/proxy.php`.
+
+> ⚠️ **Never** upload or commit `proxy.php` to GitHub — it has your secret key inside.
+> Only the `proxy.example.php` (with a fake placeholder key) belongs in the public repo.
+
+---
 
 ## What it costs
 
-- Each brainstorm round costs a **fraction of a cent** of API credit (it asks Claude's
-  cheapest model, Haiku, for 20 names). The availability checks are completely free.
+- Each brainstorm round costs a **fraction of a cent** of API credit (Claude's cheapest
+  model, Haiku, for 20 names). Availability checks are completely free.
+- The proxy limits each visitor to 40 requests/hour and forces the cheap model, so even
+  if someone finds the site they can't run up a big bill.
 - Registering a domain costs money at the registrar — the 💲 symbols hint at price:
   💲 ≈ $10/year (like .com), 💲💲 ≈ $20–35, 💲💲💲 ≈ $35–70, 💲💲💲💲 = $70+.
 
-## Putting it online (optional)
-
-You can host it on your iWebFusion site so it works from any device:
-
-1. Log in to cPanel (details in "iWebFusion login.txt").
-2. Open **File Manager** → go into **public_html**.
-3. Create a folder called `domain-genie` and upload **index.html** into it.
-4. Visit `https://your-site.com/domain-genie/` in any browser.
-
-Note: your API key is **not** inside the uploaded file — each browser/device asks for
-the key once and keeps it locally. So it's safe to put online, but anyone you share
-the link with would need their own API key to use it.
+---
 
 ## If something goes wrong
 
-- **"API key was rejected"** — re-copy the key carefully from "Claude API key.txt"
-  (no spaces before/after), click ⚙️ and paste it again.
-- **Names appear but all say "Couldn't check"** — your internet may be blocking the
-  registry lookups; try again in a minute.
-- **Nothing happens on double-click** — right-click index.html → Open with → Chrome or Edge.
+- **Names never load / "request failed"** — the site can't reach `proxy.php`. Check that:
+  - `proxy.php` is uploaded to `public_html/domain-genie/` on iWebFusion.
+  - Your site is reachable over **https** (the GitHub site can only call an `https://`
+    address). In cPanel, make sure **SSL/TLS Status → AutoSSL** covers `asafgal.com`.
+  - The `PROXY_URL` line at the top of `index.html`'s script matches your real address
+    (try `www.asafgal.com` if `asafgal.com` doesn't work, or vice-versa).
+- **"Rate limit reached"** — you (or someone) made 40+ requests in an hour; wait a bit.
+- **Names appear but all say "Couldn't check"** — the free registry lookups were blocked;
+  try again in a minute.

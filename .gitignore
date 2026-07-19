@@ -1,0 +1,2 @@
+# The real proxy contains your secret Anthropic key — never commit it.
+proxy.php

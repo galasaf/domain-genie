@@ -184,15 +184,6 @@
     <div class="row">
       <button id="go" class="primary">✨ Summon names</button>
       <button id="more" class="ghost" style="display:none">➕ More names</button>
-      <button id="gear" class="ghost" title="API key settings">⚙️</button>
-    </div>
-    <div id="settings">
-      <label for="apikey">Anthropic API key (stored only in this browser)</label>
-      <input id="apikey" type="password" placeholder="sk-ant-…">
-      <div class="hint">
-        The key is saved in your browser's local storage and sent only to api.anthropic.com.
-        Get one at <b>console.anthropic.com</b> → API keys. Each brainstorm costs a fraction of a cent.
-      </div>
     </div>
     <div id="error" class="error"></div>
   </div>
@@ -210,6 +201,11 @@
 <script>
 "use strict";
 
+// The public app holds NO API key. It sends your idea to a tiny proxy on your
+// own web host, which talks to Claude with your key kept secret server-side.
+// ▼ If your site URL differs, change ONLY this one line (then re-upload).
+const PROXY_URL = "https://asafgal.com/domain-genie/proxy.php";
+
 // ---------- state ----------
 const $ = id => document.getElementById(id);
 let candidates = [];          // {domain, name, tld, score, why, status, verified}
@@ -226,52 +222,22 @@ const TLD_PRICE = {
 // Known-safe fallback if the IANA bootstrap file can't be fetched:
 const RDAP_SAFE_FALLBACK = new Set(["com","net","org","app","dev","xyz","io","me","co","info","biz","club","site","fun","life","world","one","pro","live","blog","studio","design","cafe","games","chat","wiki","us","cc"]);
 
-// ---------- settings ----------
-$("gear").onclick = () => $("settings").classList.toggle("open");
-$("apikey").value = localStorage.getItem("dg_apikey") || "";
-$("apikey").oninput = e => localStorage.setItem("dg_apikey", e.target.value.trim());
-if (!$("apikey").value) $("settings").classList.add("open");
-
 function showError(msg) { const e = $("error"); e.textContent = msg; e.style.display = "block"; }
 function clearError() { $("error").style.display = "none"; }
 function setStatus(html) { $("status").innerHTML = html; }
 
 // ---------- name generation (Claude) ----------
 async function generateNames(idea, avoidList) {
-  const key = localStorage.getItem("dg_apikey");
-  if (!key) {
-    $("settings").classList.add("open");
-    throw new Error("Please paste your Anthropic API key first (⚙️).");
-  }
-
-  const prompt = `Witty brand-naming expert. Idea: """${idea}"""
-
-Invent 20 domain names: short, punchy, easy to spell aloud; puns and portmanteaus encouraged. Mostly .com. Another TLD only if it completes the wordplay (bit.ly style) or is polished mainstream (.co .app .io .me .dev) — never a gimmicky TLD (.sport, .money…) as a fallback, and avoid pricey TLDs like .ai. No hyphens/numbers unless part of the joke. Ignore registration status; avoid famous brand names.
-${avoidList.length ? `Do not repeat, and take different angles than: ${avoidList.join(" ")}\n` : ""}Score each 1-10 for cleverness+brandability.
-
-Output exactly 20 lines, nothing else, each formatted:
-domain.tld|score|why it's clever, max 8 words`;
-
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+  const res = await fetch(PROXY_URL, {
     method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": key,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 800,
-      messages: [{ role: "user", content: prompt }]
-    })
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ idea, avoid: avoidList })
   });
 
-  if (res.status === 401) throw new Error("That API key was rejected — double-check it (⚙️).");
-  if (res.status === 429) throw new Error("Rate limited by the API — wait a few seconds and try again.");
+  if (res.status === 429) throw new Error("Busy right now — too many requests. Wait a minute and try again.");
   if (!res.ok) {
     let detail = "";
-    try { detail = (await res.json()).error?.message || ""; } catch {}
+    try { const j = await res.json(); detail = j.error?.message || j.error || ""; } catch {}
     throw new Error(`The naming request failed (${res.status}). ${detail}`);
   }
 
