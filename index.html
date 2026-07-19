@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domain Genie 🧞 — clever domain names that are actually available</title>
+<style>
+  :root {
+    --bg: #0f1220;
+    --card: #1a1f35;
+    --card-hover: #212745;
+    --text: #eef0ff;
+    --muted: #9aa3c7;
+    --accent: #7c5cff;
+    --accent2: #ff5c8a;
+    --good: #2fd67b;
+    --maybe: #ffc247;
+    --bad: #ff6161;
+    --border: #2b3153;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: radial-gradient(1200px 600px at 70% -10%, #23194d 0%, var(--bg) 55%);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 16px 80px;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+  header { text-align: center; margin: 24px 0 28px; }
+  h1 { font-size: 2.2rem; letter-spacing: -0.5px; }
+  h1 .genie { display: inline-block; transform: translateY(2px); }
+  .tagline { color: var(--muted); margin-top: 6px; font-size: 1.02rem; }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+  }
+  textarea {
+    width: 100%;
+    background: #12162a;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    font: inherit;
+    font-size: 1.05rem;
+    padding: 14px;
+    resize: vertical;
+    min-height: 84px;
+  }
+  textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  .row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+  button {
+    font: inherit;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 22px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white;
+    font-size: 1.05rem;
+    flex: 1;
+    min-width: 220px;
+  }
+  .primary:hover { filter: brightness(1.12); }
+  .primary:disabled { filter: grayscale(0.7); cursor: wait; }
+  .ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .ghost:hover { color: var(--text); border-color: var(--muted); }
+
+  /* settings */
+  #settings { margin-top: 14px; display: none; }
+  #settings.open { display: block; }
+  #settings label { display: block; color: var(--muted); font-size: 0.9rem; margin-bottom: 6px; }
+  #settings input {
+    width: 100%;
+    background: #12162a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font: inherit;
+    padding: 10px 12px;
+  }
+  #settings .hint { color: var(--muted); font-size: 0.85rem; margin-top: 8px; line-height: 1.5; }
+
+  /* status line */
+  #status { margin: 22px 4px 10px; color: var(--muted); min-height: 24px; font-size: 0.98rem; }
+  #status .spin { display: inline-block; animation: spin 1s linear infinite; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* results */
+  .group-title { margin: 26px 4px 10px; font-size: 1.05rem; color: var(--muted); font-weight: 600; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    transition: background 0.15s;
+  }
+  .card:hover { background: var(--card-hover); }
+  .card.dim { opacity: 0.55; }
+  .card .main { flex: 1; min-width: 0; }
+  .domain { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.3px; word-break: break-all; }
+  .domain .tld { color: var(--accent2); }
+  .why { color: var(--muted); font-size: 0.92rem; margin-top: 4px; line-height: 1.45; }
+  .meta { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .pill {
+    font-size: 0.78rem;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .pill.avail { background: rgba(47,214,123,0.12); color: var(--good); border-color: rgba(47,214,123,0.4); }
+  .pill.maybe { background: rgba(255,194,71,0.10); color: var(--maybe); border-color: rgba(255,194,71,0.35); }
+  .pill.taken { background: rgba(255,97,97,0.10); color: var(--bad); border-color: rgba(255,97,97,0.35); }
+  .pill.checking { color: var(--muted); }
+  .pill .spin { display: inline-block; animation: spin 1s linear infinite; }
+  .score {
+    font-size: 1.05rem;
+    font-weight: 800;
+    background: rgba(124,92,255,0.15);
+    color: #b8a6ff;
+    border-radius: 10px;
+    padding: 8px 11px;
+    text-align: center;
+    min-width: 52px;
+  }
+  .score small { display: block; font-size: 0.62rem; font-weight: 600; color: var(--muted); }
+  .actions { display: flex; flex-direction: column; gap: 6px; }
+  .actions a, .actions button {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    text-align: center;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .actions a:hover, .actions button:hover { color: var(--text); border-color: var(--accent); }
+  .register { border-color: rgba(47,214,123,0.4) !important; color: var(--good) !important; }
+
+  footer { text-align: center; color: var(--muted); font-size: 0.8rem; margin-top: 40px; line-height: 1.6; }
+  .error {
+    background: rgba(255,97,97,0.1);
+    border: 1px solid rgba(255,97,97,0.4);
+    color: #ffb3b3;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 16px;
+    display: none;
+  }
+  @media (max-width: 560px) {
+    .card { flex-wrap: wrap; }
+    .actions { flex-direction: row; width: 100%; }
+    .actions a, .actions button { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="genie">🧞</span> Domain Genie</h1>
+    <div class="tagline">Describe your idea. Get clever names. See which ones are actually free.</div>
+  </header>
+
+  <div class="panel">
+    <textarea id="idea" placeholder="Describe your idea… e.g. “An app that reminds you to text your friends back before they hate you”"></textarea>
+    <div class="row">
+      <button id="go" class="primary">✨ Summon names</button>
+      <button id="more" class="ghost" style="display:none">➕ More names</button>
+      <button id="gear" class="ghost" title="API key settings">⚙️</button>
+    </div>
+    <div id="settings">
+      <label for="apikey">Anthropic API key (stored only in this browser)</label>
+      <input id="apikey" type="password" placeholder="sk-ant-…">
+      <div class="hint">
+        The key is saved in your browser's local storage and sent only to api.anthropic.com.
+        Get one at <b>console.anthropic.com</b> → API keys. Each brainstorm costs a fraction of a cent.
+      </div>
+    </div>
+    <div id="error" class="error"></div>
+  </div>
+
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <footer>
+    Availability is checked live against domain registries (RDAP), with a DNS fallback for exotic endings —
+    always confirm at the registrar before celebrating.<br>
+    💲 = cheap (~$10/yr) &nbsp; 💲💲 = moderate (~$20–35) &nbsp; 💲💲💲 = pricey (~$35–70) &nbsp; 💲💲💲💲 = expensive ($70+)
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+// ---------- state ----------
+const $ = id => document.getElementById(id);
+let candidates = [];          // {domain, name, tld, score, why, status, verified}
+let rdapTlds = null;          // Set of TLDs with RDAP support (from IANA bootstrap)
+let generating = false;
+
+const TLD_PRICE = {
+  com:1, net:1, org:1, us:1, xyz:1, it:1, one:1, pro:1, site:1, fun:1, life:1, world:1, club:1, info:1,
+  co:2, app:2, dev:2, me:2, cc:2, bio:2, studio:2, cafe:2, games:2, blog:2, live:2, chat:2, wiki:2,
+  io:3, ly:3, is:3, sh:3, gg:3, tv:3, so:3, design:3, gs:3, vc:3,
+  ai:4, to:4, fm:4, ws:4, nu:4
+};
+
+// Known-safe fallback if the IANA bootstrap file can't be fetched:
+const RDAP_SAFE_FALLBACK = new Set(["com","net","org","app","dev","xyz","io","me","co","info","biz","club","site","fun","life","world","one","pro","live","blog","studio","design","cafe","games","chat","wiki","us","cc"]);
+
+// ---------- settings ----------
+$("gear").onclick = () => $("settings").classList.toggle("open");
+$("apikey").value = localStorage.getItem("dg_apikey") || "";
+$("apikey").oninput = e => localStorage.setItem("dg_apikey", e.target.value.trim());
+if (!$("apikey").value) $("settings").classList.add("open");
+
+function showError(msg) { const e = $("error"); e.textContent = msg; e.style.display = "block"; }
+function clearError() { $("error").style.display = "none"; }
+function setStatus(html) { $("status").innerHTML = html; }
+
+// ---------- name generation (Claude) ----------
+async function generateNames(idea, avoidList) {
+  const key = localStorage.getItem("dg_apikey");
+  if (!key) {
+    $("settings").classList.add("open");
+    throw new Error("Please paste your Anthropic API key first (⚙️).");
+  }
+
+  const prompt = `Witty brand-naming expert. Idea: """${idea}"""
+
+Invent 20 domain names: short, punchy, easy to spell aloud; puns and portmanteaus encouraged. Mostly .com. Another TLD only if it completes the wordplay (bit.ly style) or is polished mainstream (.co .app .io .me .dev) — never a gimmicky TLD (.sport, .money…) as a fallback, and avoid pricey TLDs like .ai. No hyphens/numbers unless part of the joke. Ignore registration status; avoid famous brand names.
+${avoidList.length ? `Do not repeat, and take different angles than: ${avoidList.join(" ")}\n` : ""}Score each 1-10 for cleverness+brandability.
+
+Output exactly 20 lines, nothing else, each formatted:
+domain.tld|score|why it's clever, max 8 words`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": key,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 800,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  if (res.status === 401) throw new Error("That API key was rejected — double-check it (⚙️).");
+  if (res.status === 429) throw new Error("Rate limited by the API — wait a few seconds and try again.");
+  if (!res.ok) {
+    let detail = "";
+    try { detail = (await res.json()).error?.message || ""; } catch {}
+    throw new Error(`The naming request failed (${res.status}). ${detail}`);
+  }
+
+  const data = await res.json();
+  let text = ((data.content || []).find(b => b.type === "text")?.text || "").trim();
+  // strip accidental code fences
+  text = text.replace(/^```\w*\s*/i, "").replace(/```\s*$/, "");
+
+  const seen = new Set(candidates.map(c => c.domain));
+  const out = [];
+  for (const line of text.split("\n")) {
+    const parts = line.split("|");
+    if (parts.length < 3) continue;
+    const item = { domain: parts[0], score: parts[1], why: parts.slice(2).join("|") };
+    const domain = item.domain.toLowerCase().trim().replace(/^[\d.)\s-]+/, "").replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+    if (!/^[a-z0-9][a-z0-9-]{0,62}\.[a-z]{2,24}$/.test(domain)) continue;
+    if (seen.has(domain)) continue;
+    seen.add(domain);
+    const dot = domain.lastIndexOf(".");
+    out.push({
+      domain,
+      name: domain.slice(0, dot),
+      tld: domain.slice(dot + 1),
+      score: Math.max(1, Math.min(10, Number(item.score) || 5)),
+      why: String(item.why || "").trim().slice(0, 200),
+      status: "checking",   // checking | available | likely | taken | unknown
+      verified: false
+    });
+  }
+  if (!out.length) throw new Error("No usable names came back — try rephrasing your idea.");
+  return out;
+}
+
+// ---------- availability checking ----------
+async function loadRdapBootstrap() {
+  if (rdapTlds) return;
+  try {
+    const res = await fetch("https://data.iana.org/rdap/dns.json");
+    const data = await res.json();
+    rdapTlds = new Set();
+    for (const service of data.services) for (const tld of service[0]) rdapTlds.add(tld.toLowerCase());
+  } catch {
+    rdapTlds = RDAP_SAFE_FALLBACK;
+  }
+}
+
+// Definitive check via the registry's RDAP service. 404 = available.
+async function checkRdap(domain) {
+  const res = await fetch("https://rdap.org/domain/" + encodeURIComponent(domain), {
+    headers: { accept: "application/rdap+json" }
+  });
+  if (res.status === 404) return "available";
+  if (res.ok) return "taken";
+  throw new Error("rdap " + res.status);
+}
+
+// Fallback heuristic: does the domain have nameservers?
+async function checkDns(domain) {
+  const res = await fetch(
+    "https://cloudflare-dns.com/dns-query?name=" + encodeURIComponent(domain) + "&type=NS",
+    { headers: { accept: "application/dns-json" } }
+  );
+  if (!res.ok) throw new Error("doh " + res.status);
+  const data = await res.json();
+  if (data.Status === 3) return "likely";                      // NXDOMAIN
+  if (data.Status === 0 && (data.Answer || []).length) return "taken";
+  return "likely";
+}
+
+async function checkAvailability(c) {
+  try {
+    if (rdapTlds.has(c.tld)) {
+      c.status = await checkRdap(c.domain);
+      c.verified = true;
+      return;
+    }
+  } catch { /* fall through to DNS */ }
+  try {
+    c.status = await checkDns(c.domain);
+    c.verified = false;
+  } catch {
+    c.status = "unknown";
+  }
+}
+
+async function checkAll(list) {
+  await loadRdapBootstrap();
+  let done = 0;
+  const queue = [...list];
+  const workers = Array.from({ length: 4 }, async () => {
+    while (queue.length) {
+      const c = queue.shift();
+      await checkAvailability(c);
+      done++;
+      setStatus(`<span class="spin">🔎</span> Checking availability… ${done}/${list.length}`);
+      render();
+    }
+  });
+  await Promise.all(workers);
+}
+
+// ---------- rendering ----------
+const STATUS_RANK = { available: 0, likely: 1, checking: 2, unknown: 3, taken: 4 };
+
+function sortKey(c) {
+  return [STATUS_RANK[c.status], -(c.score + (c.tld === "com" ? 0.4 : 0))];
+}
+
+function esc(s) {
+  return s.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+}
+
+function pricePill(tld) {
+  const tier = TLD_PRICE[tld];
+  return tier ? `<span class="pill">${"💲".repeat(tier)}</span>` : "";
+}
+
+function statusPill(c) {
+  switch (c.status) {
+    case "available": return `<span class="pill avail">✅ Available</span>`;
+    case "likely":    return `<span class="pill maybe">🤔 Probably available</span>`;
+    case "taken":     return `<span class="pill taken">❌ Taken</span>`;
+    case "unknown":   return `<span class="pill">❓ Couldn't check</span>`;
+    default:          return `<span class="pill checking"><span class="spin">◌</span> checking…</span>`;
+  }
+}
+
+const GROUP_TITLES = {
+  available: "✅ Available now",
+  likely: "🤔 Probably available (couldn't fully verify — check at the registrar)",
+  checking: "⏳ Still checking",
+  unknown: "❓ Couldn't check",
+  taken: "❌ Already taken (for inspiration)"
+};
+
+function render() {
+  const sorted = [...candidates].sort((a, b) => {
+    const [ra, sa] = sortKey(a), [rb, sb] = sortKey(b);
+    return ra - rb || sa - sb;
+  });
+  let html = "", lastGroup = null;
+  for (const c of sorted) {
+    if (c.status !== lastGroup) {
+      lastGroup = c.status;
+      html += `<div class="group-title">${GROUP_TITLES[c.status]}</div>`;
+    }
+    const reg = `https://www.namecheap.com/domains/registration/results/?domain=${encodeURIComponent(c.domain)}`;
+    html += `
+      <div class="card ${c.status === "taken" ? "dim" : ""}">
+        <div class="score">${c.score}<small>/10</small></div>
+        <div class="main">
+          <div class="domain">${esc(c.name)}<span class="tld">.${esc(c.tld)}</span></div>
+          <div class="why">${esc(c.why)}</div>
+          <div class="meta">${statusPill(c)}${pricePill(c.tld)}</div>
+        </div>
+        <div class="actions">
+          ${c.status !== "taken" ? `<a class="register" href="${reg}" target="_blank" rel="noopener">Register ↗</a>` : ""}
+          <button onclick="copyDomain('${esc(c.domain)}', this)">Copy</button>
+        </div>
+      </div>`;
+  }
+  $("results").innerHTML = html;
+}
+
+window.copyDomain = (domain, btn) => {
+  navigator.clipboard.writeText(domain).then(() => {
+    btn.textContent = "Copied!";
+    setTimeout(() => (btn.textContent = "Copy"), 1200);
+  });
+};
+
+// ---------- main flow ----------
+async function run(append) {
+  if (generating) return;
+  const idea = $("idea").value.trim();
+  if (!idea) { showError("Describe your idea first — even one sentence is enough."); return; }
+  clearError();
+  generating = true;
+  $("go").disabled = true;
+  $("go").textContent = "🧞 Thinking…";
+
+  try {
+    if (!append) { candidates = []; render(); }
+    setStatus(`<span class="spin">🧞</span> Conjuring clever names…`);
+    const fresh = await generateNames(idea, candidates.map(c => c.domain));
+    candidates.push(...fresh);
+    render();
+    await checkAll(fresh);
+    render();
+    const avail = candidates.filter(c => c.status === "available" || c.status === "likely").length;
+    setStatus(avail
+      ? `Done — <b>${avail}</b> of ${candidates.length} names look available. 🎉`
+      : `Done — everything's taken this round. Hit “More names” to dig deeper.`);
+    $("more").style.display = "";
+  } catch (err) {
+    showError(err.message);
+    setStatus("");
+  } finally {
+    generating = false;
+    $("go").disabled = false;
+    $("go").textContent = "✨ Summon names";
+  }
+}
+
+$("go").onclick = () => run(false);
+$("more").onclick = () => run(true);
+$("idea").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); run(false); }
+});
+</script>
+</body>
+</html>
